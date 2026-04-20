@@ -2,7 +2,7 @@
 
 import { spawnSync } from 'child_process';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
-import { basename, join, dirname } from 'path';
+import { basename, join, dirname, resolve, relative, isAbsolute } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { runAdd, parseAddOptions, initTelemetry } from './add.ts';
@@ -214,7 +214,14 @@ function runInit(args: string[]): void {
   const skillName = args[0] || basename(cwd);
   const hasName = args[0] !== undefined;
 
-  const skillDir = hasName ? join(cwd, skillName) : cwd;
+  const skillDir = hasName ? resolve(cwd, skillName) : cwd;
+  if (hasName) {
+    const relativePath = relative(cwd, skillDir);
+    if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
+      console.log(`${TEXT}Invalid skill name${RESET}`);
+      return;
+    }
+  }
   const skillFile = join(skillDir, 'SKILL.md');
   const displayPath = hasName ? `${skillName}/SKILL.md` : 'SKILL.md';
 

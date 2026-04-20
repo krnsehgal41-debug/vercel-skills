@@ -105,4 +105,55 @@ describe('init command', () => {
       "
     `);
   });
+
+  describe('path traversal security', () => {
+    it('should reject path traversal with ../', () => {
+      const output = stripLogo(runCliOutput(['init', '../malicious-skill'], testDir));
+      expect(output).toContain('Invalid skill name');
+      
+      // Verify no file was created outside testDir
+      const parentDir = join(testDir, '..');
+      const maliciousPath = join(parentDir, 'malicious-skill', 'SKILL.md');
+      expect(existsSync(maliciousPath)).toBe(false);
+    });
+
+    it('should reject path traversal with ../../', () => {
+      const output = stripLogo(runCliOutput(['init', '../../malicious-skill'], testDir));
+      expect(output).toContain('Invalid skill name');
+      
+      // Verify no file was created outside testDir
+      const grandparentDir = join(testDir, '..', '..');
+      const maliciousPath = join(grandparentDir, 'malicious-skill', 'SKILL.md');
+      expect(existsSync(maliciousPath)).toBe(false);
+    });
+
+    it('should reject absolute paths', () => {
+      const absolutePath = '/tmp/malicious-skill';
+      const output = stripLogo(runCliOutput(['init', absolutePath], testDir));
+      expect(output).toContain('Invalid skill name');
+      
+      // Verify no file was created at absolute path
+      const maliciousPath = join(absolutePath, 'SKILL.md');
+      expect(existsSync(maliciousPath)).toBe(false);
+    });
+
+    it('should reject path traversal with subdirectory escape', () => {
+      const output = stripLogo(runCliOutput(['init', 'subdir/../../escape'], testDir));
+      expect(output).toContain('Invalid skill name');
+      
+      // Verify no file was created outside testDir
+      const parentDir = join(testDir, '..');
+      const maliciousPath = join(parentDir, 'escape', 'SKILL.md');
+      expect(existsSync(maliciousPath)).toBe(false);
+    });
+
+    it('should allow valid nested directory paths', () => {
+      const output = stripLogo(runCliOutput(['init', 'valid/nested/skill'], testDir));
+      expect(output).toContain('Initialized skill: valid/nested/skill');
+      
+      // Verify file was created in correct location within testDir
+      const validPath = join(testDir, 'valid', 'nested', 'skill', 'SKILL.md');
+      expect(existsSync(validPath)).toBe(true);
+    });
+  });
 });
