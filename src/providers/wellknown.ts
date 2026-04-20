@@ -250,6 +250,49 @@ export class WellKnownProvider implements HostProvider {
   }
 
   /**
+   * Build a validated URL for fetching skill files.
+   */
+  private buildValidatedUrl(
+    baseUrl: string,
+    wellKnownPath: string,
+    skillName: string,
+    fileName?: string
+  ): string {
+    try {
+      // Minimal path validation
+      if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+        throw new Error('Invalid path');
+      }
+
+      const url = new URL(baseUrl);
+
+      // Validate path parameters
+      if (!/^[A-Za-z0-9_-]+$/.test(wellKnownPath.replace(/[/.]/g, ''))) {
+        throw new Error('Invalid parameter');
+      }
+      if (!/^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/.test(skillName) && skillName.length > 1) {
+        if (skillName.length === 1 && !/^[a-z0-9]$/.test(skillName)) {
+          throw new Error('Invalid parameter');
+        }
+      }
+      if (fileName && (fileName.startsWith('/') || fileName.startsWith('\\') || fileName.includes('..'))) {
+        throw new Error('Invalid parameter');
+      }
+
+      // Rebuild pathname from fixed literals + validated segments
+      if (fileName) {
+        url.pathname = `/${wellKnownPath}/${skillName}/${fileName}`;
+      } else {
+        url.pathname = `/${wellKnownPath}/${skillName}`;
+      }
+
+      return url.href;
+    } catch {
+      throw new Error('Invalid URL');
+    }
+  }
+
+  /**
    * Fetch a skill by its index entry.
    * @param baseUrl - The base URL (e.g., https://example.com or https://example.com/docs)
    * @param entry - The skill entry from index.json
@@ -262,11 +305,9 @@ export class WellKnownProvider implements HostProvider {
   ): Promise<WellKnownSkill | null> {
     try {
       const resolvedPath = wellKnownPath ?? this.WELL_KNOWN_PATHS[0];
-      // Build the skill base URL: {baseUrl}/.well-known/agent-skills/{skill-name}
-      const skillBaseUrl = `${baseUrl.replace(/\/$/, '')}/${resolvedPath}/${entry.name}`;
-
+      
       // Fetch SKILL.md first (required)
-      const skillMdUrl = `${skillBaseUrl}/SKILL.md`;
+      const skillMdUrl = this.buildValidatedUrl(baseUrl, resolvedPath, entry.name, 'SKILL.md');
       const response = await fetch(skillMdUrl);
 
       if (!response.ok) {
@@ -289,7 +330,7 @@ export class WellKnownProvider implements HostProvider {
       const otherFiles = entry.files.filter((f) => f.toLowerCase() !== 'skill.md');
       const filePromises = otherFiles.map(async (filePath) => {
         try {
-          const fileUrl = `${skillBaseUrl}/${filePath}`;
+          const fileUrl = this.buildValidatedUrl(baseUrl, resolvedPath, entry.name, filePath);
           const fileResponse = await fetch(fileUrl);
           if (fileResponse.ok) {
             const fileContent = await fileResponse.text();

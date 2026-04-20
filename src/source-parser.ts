@@ -59,6 +59,27 @@ export function parseOwnerRepo(ownerRepo: string): { owner: string; repo: string
   return null;
 }
 
+function buildValidatedUrl(baseUrl: string, owner: string, repo: string): string {
+  try {
+    const url = new URL(baseUrl);
+    
+    // Validate path parameters
+    if (!/^[A-Za-z0-9_-]+$/.test(owner)) {
+      throw new Error('Invalid parameter');
+    }
+    if (!/^[A-Za-z0-9_-]+$/.test(repo)) {
+      throw new Error('Invalid parameter');
+    }
+    
+    // Rebuild pathname from fixed literals + validated segments
+    url.pathname = `/repos/${owner}/${repo}`;
+    
+    return url.href;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
 /**
  * Check if a GitHub repository is private.
  * Returns true if private, false if public, null if unable to determine.
@@ -66,7 +87,7 @@ export function parseOwnerRepo(ownerRepo: string): { owner: string; repo: string
  */
 export async function isRepoPrivate(owner: string, repo: string): Promise<boolean | null> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    const res = await fetch(buildValidatedUrl('https://api.github.com', owner, repo));
 
     // If repo doesn't exist or we don't have access, assume private to be safe
     if (!res.ok) {
