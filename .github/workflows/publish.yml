@@ -49,9 +49,12 @@ jobs:
 
       - name: Determine version bump type
         id: version
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          INPUT_BUMP: ${{ inputs.bump }}
         run: |
           # If tag push, skip version bump (already versioned)
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "bump=skip" >> $GITHUB_OUTPUT
             echo "Tag push - skipping version bump, will publish directly"
             exit 0
@@ -59,8 +62,8 @@ jobs:
 
           # If manually triggered, use the input value
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "bump=${{ inputs.bump }}" >> $GITHUB_OUTPUT
-            echo "Manual trigger - will bump ${{ inputs.bump }} version"
+            echo "bump=$INPUT_BUMP" >> $GITHUB_OUTPUT
+            echo "Manual trigger - will bump $INPUT_BUMP version"
             exit 0
           fi
 
