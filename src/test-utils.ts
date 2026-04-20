@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { join } from 'path';
 
 // const PROJECT_ROOT = join(import.meta.dirname, '..');
@@ -55,7 +55,7 @@ export function runCliWithInput(
   cwd?: string
 ): { stdout: string; stderr: string; exitCode: number } {
   try {
-    const output = execSync(`node "${CLI_PATH}" ${args.join(' ')}`, {
+    const output = execFileSync('node', [CLI_PATH, ...args], {
       encoding: 'utf-8',
       cwd,
       input: input + '\n',
