@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import '@aikidosec/firewall';
 import { spawnSync } from 'child_process';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { basename, join, dirname } from 'path';
